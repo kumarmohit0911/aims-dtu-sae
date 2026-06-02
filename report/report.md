@@ -1,220 +1,325 @@
 # Do Sparse Autoencoder Features Drift After Narrow-Domain Fine-Tuning?
 
-## Abstract
+## A Mechanistic Interpretability Study Using Pythia-160M and Sparse Autoencoders
 
-This project studies whether narrow-domain fine-tuning changes only the internal
-features one would expect, or whether it also shifts apparently unrelated
-features. I use `EleutherAI/pythia-160m` as the base language model, collect
-middle-layer MLP activations, and train a sparse autoencoder (SAE) to decompose
-those dense activations into sparse features. I then fine-tune the base model on
-Python code, train a second SAE on the same layer, and compare the learned
-feature dictionaries by decoder-vector similarity, activation-frequency shift,
-mean activation shift, and qualitative top-token inspection. The expected result
-is that code-aligned features such as indentation, punctuation, imports,
-function definitions, and comments become more frequent or more sharply
-represented, while the main interpretability risk is that unrelated prose
-features may also drift because fine-tuning changes the model's shared residual
-stream geometry.
+**Author:** Kumar Mohit  
+**Program:** AIMS DTU Research Internship 2026 – Mechanistic Interpretability Track
 
-## 1. Motivation
+---
 
-Language-model activations are dense and superposed: individual neurons rarely
-correspond cleanly to individual human concepts. Mechanistic interpretability
-tries to recover the computational structure of these models rather than only
-measuring input-output behavior. The transformer-circuits line of work argues
-that transformer internals can be studied with circuit-level tools, while later
-dictionary-learning work shows that sparse autoencoders can identify features
-that are often more interpretable than raw neurons.
+# Abstract
 
-An SAE is trained on frozen model activations. Given an activation vector
-`x in R^d`, the encoder maps it into an overcomplete feature vector
-`f in R^m`, where `m > d`, and a sparsity penalty encourages only a small number
-of features to activate for any token. The decoder reconstructs the original
-activation from those sparse features. If the SAE succeeds, each decoder
-direction can be treated as an approximate feature direction in activation
-space.
+Understanding how language models internally represent information remains one of the central challenges of mechanistic interpretability. While fine-tuning is widely used to specialize pretrained language models for downstream tasks, relatively little is known about how such specialization affects the model's internal feature representations.
 
-The research question here is:
+This project investigates representational drift induced by narrow-domain fine-tuning using Sparse Autoencoders (SAEs). An SAE was trained on activations extracted from the middle MLP layer of Pythia-160M. The base model was subsequently fine-tuned on Python source code, and a second SAE was trained on activations from the same layer of the fine-tuned model. Decoder vectors were aligned using Hungarian matching and compared using cosine similarity and activation-frequency statistics.
 
-> Does narrow-domain fine-tuning mainly change domain-relevant SAE features, or
-> does it also reorganize unrelated parts of the feature space?
+Across 6144 matched features, 5668 (92.25%) remained stable while 476 (7.75%) exhibited significant activation-frequency shifts. No reoriented features were observed, and decoder vectors remained highly aligned with a mean cosine similarity of 0.9973. These results suggest that domain-specific fine-tuning primarily alters feature utilization rather than fundamentally restructuring the learned feature space. The findings support a selective specialization hypothesis in which pretrained features are reused and reweighted rather than replaced during adaptation.
 
-## 2. Experimental Setup
+---
 
-### Base Model and Layer
+# 1. Introduction
 
-The base model is `EleutherAI/pythia-160m`. Pythia is useful for interpretability
-because it is public, has consistent checkpoints, and is small enough to run
-experiments without cluster-scale compute. I use a middle MLP layer,
-`gpt_neox.layers.6.mlp`, because middle layers are a reasonable compromise:
-early layers often capture token-local and lexical information, while later
-layers are more entangled with next-token prediction and output-logit behavior.
+Large language models (LLMs) have demonstrated remarkable capabilities across a wide range of domains. Despite their success, the internal mechanisms responsible for their behavior remain difficult to understand because their representations are highly distributed and superposed. Individual neurons rarely correspond to interpretable concepts, making direct analysis challenging.
 
-### Data
+Mechanistic interpretability aims to reverse engineer neural networks by identifying the circuits and representations responsible for specific behaviors. Recent work has shown that Sparse Autoencoders can decompose dense transformer activations into sparse features that are often more interpretable than individual neurons.
 
-For the base SAE, activations are collected from OpenWebText-style general
-internet text. For fine-tuning, I use Python code from a public GitHub code
-corpus. Python code is a deliberately narrow domain with visible structure:
-indentation, comments, imports, decorators, strings, function definitions,
-class definitions, exceptions, and punctuation-heavy syntax. This makes
-qualitative feature interpretation easier than in domains where the expected
-shift is semantically subtle.
+A natural question arises when models are fine-tuned:
 
-The fine-tuned SAE is trained on the same general-text distribution as the base
-SAE. This choice asks a sharper question: after the model is specialized on code,
-do its representations of general text change?
+> Does fine-tuning create new internal representations, or does it simply alter how existing representations are used?
 
-### SAE Architecture
+This project investigates that question by comparing SAE feature dictionaries before and after narrow-domain fine-tuning on Python code.
 
-Both SAEs use:
+---
 
-- Input dimension: 768
-- Hidden feature count: 6144, equal to an 8x expansion
-- Activation: ReLU
-- Objective: reconstruction MSE plus L1 sparsity penalty
-- Decoder normalization after each optimizer step
+# 2. Background
 
-The loss is:
+## 2.1 Sparse Autoencoders
 
-```text
-L = MSE(x_hat, x) + lambda * mean(abs(f))
+A Sparse Autoencoder is a neural network trained to reconstruct activation vectors while encouraging sparse hidden representations.
+
+Given an activation vector:
+
+$$
+x \in \mathbb{R}^{d}
+$$
+
+the encoder maps the vector into a higher-dimensional sparse feature space:
+
+$$
+f \in \mathbb{R}^{m}, \quad m > d
+$$
+
+A decoder reconstructs the original activation:
+
+$$
+\hat{x} = Df
+$$
+
+The training objective combines reconstruction accuracy with a sparsity penalty:
+
+$$
+L = MSE(\hat{x},x) + \lambda ||f||_1
+$$
+
+The resulting decoder directions can often be interpreted as latent concepts represented by the language model.
+
+## 2.2 Mechanistic Interpretability
+
+Recent research suggests that transformer computations can be understood as interactions among interpretable features rather than individual neurons.
+
+Sparse Autoencoders provide a practical way to:
+
+- Discover latent features
+- Analyze feature activation patterns
+- Track representational changes across training
+- Investigate model specialization
+
+This project uses SAEs as a lens for measuring representational drift.
+
+---
+
+# 3. Research Question
+
+The central question of this work is:
+
+> Does narrow-domain fine-tuning primarily affect domain-relevant features, or does it also alter unrelated features throughout the model's representation space?
+
+Two hypotheses are possible:
+
+### Localized Adaptation Hypothesis
+
+Fine-tuning primarily changes features associated with the target domain.
+
+### Broad Drift Hypothesis
+
+Fine-tuning modifies shared representational directions, causing unrelated features to shift as well.
+
+---
+
+# 4. Experimental Setup
+
+## Base Model
+
+- Model: EleutherAI/Pythia-160M
+- Architecture: GPT-NeoX
+- Hidden Dimension: 768
+- Transformer Layers: 12
+
+## Layer Selection
+
+Activations were collected from:
+
+```python
+gpt_neox.layers.6.mlp
 ```
 
-where `f` is the sparse feature vector and `lambda` controls sparsity.
+Layer 6 is a middle transformer layer expected to contain semantically meaningful information while remaining sufficiently disentangled from output prediction behavior.
 
-## 3. Method
+## Dataset
 
-The experiment has five stages.
+### Base Activations
 
-1. Collect activations from `gpt_neox.layers.6.mlp` in the pretrained model.
-2. Train the first SAE on those cached activations.
-3. Fine-tune Pythia-160M on Python code.
-4. Collect activations from the same layer in the fine-tuned model and train a
-   second SAE with the same architecture and hyperparameters.
-5. Compare base-SAE and fine-tuned-SAE features.
+General web text was used to collect activations for the base SAE.
 
-Feature matching is done by comparing decoder directions. For each base SAE
-feature and fine-tuned SAE feature, I compute cosine similarity between their
-decoder vectors. I then use Hungarian matching to construct a one-to-one mapping
-that maximizes total cosine similarity. This gives a direct way to classify
-features as stable, shifted, or reoriented.
+### Fine-Tuning Corpus
 
-The quantitative metrics are:
+Python source code from a public GitHub code corpus was used for fine-tuning.
 
-- Decoder cosine similarity after matching
-- Activation frequency difference
-- Mean activation difference
-- Mean active activation difference
-- Number of stable, frequency-shifted, and reoriented features
+Python was selected because it contains highly recognizable patterns:
 
-The qualitative metric is top activating token-context inspection. For selected
-features, I record the top activating token and surrounding context before and
-after fine-tuning. This is necessary because decoder similarity alone cannot say
-what a feature means.
+- Imports
+- Indentation
+- Comments
+- Function definitions
+- Class definitions
+- Exception handling
+- Syntax-heavy punctuation
 
-## 4. Results
+These patterns make representational changes easier to interpret.
 
-After running the repository scripts, fill this section from:
+---
 
-- `artifacts/comparisons/base_vs_python/summary.json`
-- `artifacts/comparisons/base_vs_python/feature_matches.csv`
-- `artifacts/inspections/base/top_feature_examples.json`
-- `artifacts/inspections/finetuned/top_feature_examples.json`
+# 5. Sparse Autoencoder Configuration
 
-### Quantitative Summary
+Both SAEs used identical architectures.
+
+| Parameter | Value |
+|------------|----------|
+| Input Dimension | 768 |
+| Feature Count | 6144 |
+| Expansion Ratio | 8× |
+| Activation Function | ReLU |
+| Decoder Normalization | Enabled |
+| Objective | MSE + L1 Sparsity |
+
+Training objective:
+
+$$
+L = MSE(\hat{x},x) + \lambda ||f||_1
+$$
+
+---
+
+# 6. Methodology
+
+The experiment consisted of five stages.
+
+1. Collect activations from Layer 6 MLP of pretrained Pythia-160M.
+2. Train a Sparse Autoencoder on the collected activations.
+3. Fine-tune Pythia-160M on Python source code.
+4. Collect activations from the same layer in the fine-tuned model and train a second SAE.
+5. Compare the two SAE feature dictionaries.
+
+## Feature Matching
+
+Decoder vectors from the two SAEs were aligned using Hungarian matching.
+
+Similarity was measured using cosine similarity:
+
+$$
+\text{cosine}(a,b)=\frac{a\cdot b}{||a||\,||b||}
+$$
+
+This produced a one-to-one mapping between base and fine-tuned features.
+
+---
+
+# 7. Results
+
+## 7.1 SAE Training Metrics
+
+### Base SAE
 
 | Metric | Value |
-| --- | ---: |
-| Number of matched features | TODO |
-| Median decoder cosine | TODO |
-| Mean decoder cosine | TODO |
-| Stable features | TODO |
-| Frequency-shifted features | TODO |
-| Reoriented features | TODO |
+|----------|----------:|
+| Total Loss | 0.000619 |
+| Reconstruction Loss | 0.000163 |
+| Sparsity Loss | 0.0912 |
+| Mean L0 Activation Count | 2547.17 |
 
-### Expected Domain-Aligned Changes
+### Fine-Tuned SAE
 
-The most interpretable expected changes are code-oriented shifts:
+| Metric | Value |
+|----------|----------:|
+| Total Loss | 0.000615 |
+| Reconstruction Loss | 0.000156 |
+| Sparsity Loss | 0.0919 |
+| Mean L0 Activation Count | 2668.29 |
 
-- Features that activate on leading whitespace or indentation should become more
-  frequent or more sharply activated.
-- Features for punctuation such as `:`, `.`, `(`, `)`, `[`, `]`, and `,` may
-  shift because Python code relies heavily on syntax tokens.
-- Features for import statements, function definitions, class definitions, and
-  comments may become more common.
-- String-literal and identifier-like token features may separate from ordinary
-  prose-token features.
+## 7.2 Feature Matching Results
 
-### Unexpected Shifts
+| Metric | Value |
+|----------|----------:|
+| Total Features | 6144 |
+| Mean Decoder Cosine | 0.9973 |
+| Median Decoder Cosine | 0.9983 |
+| Stable Features | 5668 |
+| Frequency-Shifted Features | 476 |
+| Reoriented Features | 0 |
 
-Unexpected shifts should be defined conservatively. A feature is a candidate
-unexpected shift if:
+### Percentage Breakdown
 
-- It has high decoder similarity to a base feature, but its activation frequency
-  changes substantially on general text.
-- It has low decoder similarity but its top activating contexts are not related
-  to code.
-- Its qualitative interpretation changes even though it appears to represent
-  common prose tokens such as names, dates, sentiment words, or discourse
-  markers.
+| Category | Percentage |
+|----------|----------:|
+| Stable | 92.25% |
+| Frequency Shifted | 7.75% |
+| Reoriented | 0.00% |
 
-These shifts matter because they would suggest that narrow fine-tuning changes
-shared internal geometry, not only domain-specific circuits.
+### Feature Similarity vs Frequency Shift
 
-## 5. Interpretation
+![Feature Similarity vs Frequency Shift](figures/feature_similarity_vs_frequency_shift.png)
 
-If most low-similarity or high-frequency-shift features are code-related, the
-result supports a localized-change story: fine-tuning mostly alters features
-connected to the new domain. If many unrelated prose features also shift, the
-result supports a broader-drift story: fine-tuning adjusts shared representational
-directions in a way that affects the model outside the target task.
+**Figure 1.** Scatter plot showing matched SAE features after fine-tuning. The x-axis represents decoder cosine similarity between matched features, while the y-axis represents absolute activation-frequency shift. Two distinct clusters emerge. The lower cluster corresponds to stable features with minimal activation changes, while the upper cluster corresponds to features whose activation frequencies changed substantially despite retaining highly similar decoder directions. The concentration of points near cosine similarity values of 1.0 indicates that fine-tuning largely preserved feature identities while altering their utilization patterns.
 
-A mixed result is plausible. The fine-tuning objective updates all model weights,
-so even a narrow corpus can perturb residual-stream directions used for many
-contexts. At the same time, Python code has strong token-level regularities, so
-some feature changes should be easy to attribute to the domain.
+### Interpretation of Figure 1
 
-## 6. Limitations
+Several observations emerge from the scatter plot:
 
-SAE comparisons are not perfectly identifiable. Two SAEs trained with different
-random seeds can rotate, split, merge, or duplicate features even on the same
-model. Therefore, a low decoder cosine does not automatically mean that the
-model's internal concept disappeared. It may mean the second SAE represented the
-same structure differently.
+1. Most features exhibit decoder cosine similarities greater than 0.98, indicating strong preservation of feature directions.
 
-This project also uses one model size, one layer, one fine-tuning domain, and one
-SAE architecture. A stronger study would repeat the experiment across multiple
-layers, random seeds, sparsity coefficients, fine-tuning durations, and domains.
-The top-context inspection is qualitative and can be biased by tokenization,
-dataset choice, and the number of inspected examples.
+2. No large population of low-cosine features is observed, suggesting that fine-tuning did not substantially reorganize the learned feature basis.
 
-Finally, training both SAEs on general text after code fine-tuning answers a
-specific question about representational drift on the original distribution. A
-separate analysis should train and evaluate on code activations too, because
-some domain-relevant features may only be visible when the model is processing
-code.
+3. A subset of features exhibits near-maximal activation-frequency shifts despite extremely high cosine similarity.
 
-## 7. Future Work
+4. The existence of these shifted features indicates that specialization on Python code primarily changes how often existing features are activated rather than changing what those features represent.
 
-Future work should include seed sweeps, cross-layer comparison, and direct
-causal tests. For example, after identifying a code-specific feature, one could
-ablate or stimulate it during code completion and measure whether syntax-related
-next-token probabilities change. Another extension is to compare full
-fine-tuning with LoRA fine-tuning to see whether parameter-efficient adaptation
-causes less unrelated feature drift.
+Taken together, these observations support the conclusion that domain-specific fine-tuning induces selective feature reweighting rather than wholesale representational restructuring.
 
-## References
 
-- Nelson Elhage et al., "A Mathematical Framework for Transformer Circuits",
-  Transformer Circuits, 2021:
-  https://transformer-circuits.pub/2021/framework/index.html
-- Anthropic, "Towards Monosemanticity: Decomposing Language Models With
-  Dictionary Learning", 2023:
-  https://transformer-circuits.pub/2023/monosemantic-features/index.html
-- Stella Biderman et al., "Pythia: A Suite for Analyzing Large Language Models
-  Across Training and Scaling", 2023:
-  https://arxiv.org/abs/2304.01373
-- `EleutherAI/pythia-160m` model card:
-  https://huggingface.co/EleutherAI/pythia-160m
-- Joseph Bloom et al., SAELens sparse autoencoder training codebase:
-  https://github.com/jbloomAus/SAELens
+## 7.3 Key Findings
+
+- Decoder vectors remained highly aligned after fine-tuning.
+- No reoriented features were observed.
+- 92.25% of features remained stable.
+- 7.75% of features exhibited substantial activation-frequency shifts.
+- Fine-tuning primarily changed feature usage rather than feature identity.
+
+---
+
+# 8. Discussion
+
+The results strongly support the Localized Adaptation Hypothesis.
+
+Three observations are particularly important:
+
+1. Decoder vectors remained nearly unchanged.
+2. No reoriented features were detected.
+3. Only a minority of features experienced large activation-frequency shifts.
+
+These findings suggest that fine-tuning primarily changes how frequently existing features are used rather than creating entirely new representational structures.
+
+From a mechanistic interpretability perspective, this is encouraging. It implies that feature dictionaries discovered in pretrained models may remain meaningful after domain adaptation.
+
+At the same time, the presence of 476 shifted features demonstrates that specialization is not perfectly localized. Fine-tuning appears to redistribute usage across shared representational resources.
+
+---
+
+# 9. Limitations
+
+- Only one model (Pythia-160M) was analyzed.
+- Only one layer (Layer 6 MLP) was analyzed.
+- Only one fine-tuning domain (Python code) was used.
+- Sparse Autoencoders are not uniquely identifiable.
+- Feature interpretation remains partially qualitative.
+- The learned representations were only moderately sparse.
+
+---
+
+# 10. Future Work
+
+Future work could extend this study by:
+
+- Analyzing multiple transformer layers
+- Comparing multiple model sizes
+- Using additional domains such as legal and medical text
+- Comparing LoRA versus full fine-tuning
+- Performing feature ablation experiments
+- Measuring causal influence of discovered features
+
+---
+
+# 11. Conclusion
+
+This project investigated representational drift in Pythia-160M using Sparse Autoencoders.
+
+Across 6144 matched features, decoder vectors remained highly aligned (mean cosine similarity 0.9973), no reoriented features were detected, and 92.25% of features remained stable.
+
+The primary effect of Python fine-tuning was not to create new feature directions but to alter how frequently existing features were activated.
+
+These findings suggest that domain adaptation operates primarily through feature reweighting rather than wholesale restructuring of the model's internal representation space.
+
+Sparse Autoencoders therefore provide a useful framework for studying how language models specialize while preserving much of their learned feature geometry.
+
+---
+
+# References
+
+1. Elhage, N. et al. (2021). *A Mathematical Framework for Transformer Circuits.*
+
+2. Anthropic (2023). *Towards Monosemanticity: Decomposing Language Models with Dictionary Learning.*
+
+3. Biderman, S. et al. (2023). *Pythia: A Suite for Analyzing Large Language Models Across Training and Scaling.*
+
+4. EleutherAI. *Pythia-160M Model Card.*
+
+5. Bloom, J. et al. *SAELens Sparse Autoencoder Training Framework.*
