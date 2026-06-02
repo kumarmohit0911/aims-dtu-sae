@@ -1,4 +1,3 @@
-````md
 # Feature Drift in Sparse Autoencoders After Narrow-Domain Fine-Tuning
 
 This repository contains the code, experiments, and analysis for the **AIMS DTU Research Internship 2026 – Mechanistic Interpretability Task**.
@@ -34,44 +33,57 @@ The experimental pipeline consists of:
 ## Repository Structure
 
 ```text
-configs/
-  base_sae.yaml
-  finetune.yaml
-  finetuned_sae.yaml
-
-scripts/
-  collect_activations.py
-  train_sae.py
-  finetune_model.py
-  compare_saes.py
-  inspect_features.py
-
-src/
-  data.py
-  model_utils.py
-  sae.py
-  metrics.py
-  visualization.py
-
-artifacts/
-  activations/
-  saes/
-  comparisons/
-  inspections/
-
-report/
-  report.md
-````
+aims-dtu-sae/
+│
+├── configs/                          # Experiment configurations
+│   ├── base_sae.yaml
+│   ├── finetune.yaml
+│   └── finetuned_sae.yaml
+│
+├── scripts/                          # Entry-point scripts
+│   ├── collect_activations.py
+│   ├── train_sae.py
+│   ├── finetune_model.py
+│   ├── compare_saes.py
+│   └── inspect_features.py
+│
+├── src/                              # Core implementation
+│   ├── data.py
+│   ├── model_utils.py
+│   ├── sae.py
+│   ├── metrics.py
+│   └── visualization.py
+│
+├── artifacts/                        # Generated outputs
+│   ├── activations/                  # Cached activation shards
+│   ├── saes/                         # Trained SAE checkpoints
+│   ├── comparisons/                  # Feature comparison results
+│   │   └── base_vs_python/
+│   │       ├── summary.json
+│   │       ├── feature_matches.csv
+│   │       ├── decoder_similarity_hist.png
+│   │       └── frequency_shift_scatter.png
+│   │
+│   └── inspections/                  # Top activating examples
+│       ├── base/
+│       └── finetuned/
+│
+├── report/
+│   └── report.md                     # Final technical report
+│
+├── requirements.txt
+└── README.md
+```
 
 ### Important Scripts
 
-| Script                 | Purpose                         |
-| ---------------------- | ------------------------------- |
-| collect_activations.py | Extract layer activations       |
-| train_sae.py           | Train Sparse Autoencoder        |
-| finetune_model.py      | Fine-tune Pythia-160M           |
-| compare_saes.py        | Compare SAE feature spaces      |
-| inspect_features.py    | Collect top activating contexts |
+| Script | Purpose |
+|----------|----------|
+| `collect_activations.py` | Extract layer activations |
+| `train_sae.py` | Train Sparse Autoencoder |
+| `finetune_model.py` | Fine-tune Pythia-160M |
+| `compare_saes.py` | Compare SAE feature spaces |
+| `inspect_features.py` | Collect top activating contexts |
 
 ---
 
@@ -197,13 +209,13 @@ report/report.md
 
 The report includes:
 
-* Experimental setup
-* SAE training details
-* Feature matching methodology
-* Quantitative evaluation
-* Qualitative feature analysis
-* Visualizations
-* Discussion and limitations
+- Experimental setup
+- SAE training details
+- Feature matching methodology
+- Quantitative evaluation
+- Qualitative feature analysis
+- Visualizations
+- Discussion and limitations
 
 ---
 
@@ -217,13 +229,13 @@ flytech/python-codes-25k
 
 Python was selected because it contains highly recognizable structural patterns such as:
 
-* indentation
-* imports
-* comments
-* string literals
-* function definitions
-* class definitions
-* exception handling
+- indentation
+- imports
+- comments
+- string literals
+- function definitions
+- class definitions
+- exception handling
 
 These characteristics make feature specialization easier to identify and interpret.
 
@@ -233,8 +245,5 @@ These characteristics make feature specialization easier to identify and interpr
 
 **Kumar Mohit**
 
-AIMS DTU Research Internship 2026
+AIMS DTU Research Internship 2026  
 Mechanistic Interpretability Track
-
-```
-```
