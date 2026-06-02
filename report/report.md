@@ -227,7 +227,7 @@ This produced a one-to-one mapping between base and fine-tuned features.
 
 ### Feature Similarity vs Frequency Shift
 
-![Feature Similarity vs Frequency Shift](figures/feature_similarity_vs_frequency_shift.png)
+![Feature Similarity vs Frequency Shift](../artifacts/comparisons/base_vs_python/frequency_shift_scatter.png)
 
 **Figure 1.** Scatter plot showing matched SAE features after fine-tuning. The x-axis represents decoder cosine similarity between matched features, while the y-axis represents absolute activation-frequency shift. Two distinct clusters emerge. The lower cluster corresponds to stable features with minimal activation changes, while the upper cluster corresponds to features whose activation frequencies changed substantially despite retaining highly similar decoder directions. The concentration of points near cosine similarity values of 1.0 indicates that fine-tuning largely preserved feature identities while altering their utilization patterns.
 
