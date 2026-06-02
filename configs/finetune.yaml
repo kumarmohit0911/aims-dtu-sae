@@ -1,21 +1,19 @@
 seed: 13
 base_model_name: EleutherAI/pythia-160m
 output_dir: artifacts/models/pythia160m_python_code
-
 data:
   dataset_name: flytech/python-codes-25k
   dataset_config: null
   split: train
   text_column: text
-  max_examples: 24813
+  max_examples: 5000
   max_length: 256
-
 training:
   per_device_train_batch_size: 2
   gradient_accumulation_steps: 16
-  learning_rate: 0.00002
+  learning_rate: 2.0e-05
   num_train_epochs: 1
-  max_steps: 1000
+  max_steps: 150
   warmup_ratio: 0.03
   weight_decay: 0.01
   logging_steps: 25

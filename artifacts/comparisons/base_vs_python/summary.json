@@ -1,0 +1,8 @@
+{
+  "num_features": 6144,
+  "median_decoder_cosine": 0.9982765913009644,
+  "mean_decoder_cosine": 0.9972553253173828,
+  "reoriented_features": 0,
+  "frequency_shifted_features": 476,
+  "stable_features": 5668
+}
