@@ -188,6 +188,8 @@ This produced a one-to-one mapping between base and fine-tuned features.
 
 ## 7.1 SAE Training Metrics
 
+To ensure a fair comparison between the pretrained and fine-tuned models, Sparse Autoencoders were trained independently on activations collected from the same transformer layer. Both SAEs achieved comparable reconstruction quality and sparsity characteristics.
+
 ### Base SAE
 
 | Metric | Value |
@@ -206,53 +208,135 @@ This produced a one-to-one mapping between base and fine-tuned features.
 | Sparsity Loss | 0.0919 |
 | Mean L0 Activation Count | 2668.29 |
 
+The similarity of these metrics suggests that both SAEs learned comparable representations and that observed differences are unlikely to be artifacts of SAE training quality. The fine-tuned SAE exhibited slightly lower reconstruction error and a marginally higher average activation count, indicating a modest increase in feature utilization after specialization.
+
+---
+
 ## 7.2 Feature Matching Results
+
+Decoder vectors from the base and fine-tuned SAEs were aligned using Hungarian matching. Cosine similarity was then computed between matched decoder vectors to measure feature preservation.
 
 | Metric | Value |
 |----------|----------:|
 | Total Features | 6144 |
-| Mean Decoder Cosine | 0.9973 |
-| Median Decoder Cosine | 0.9983 |
+| Mean Decoder Cosine Similarity | 0.9973 |
+| Median Decoder Cosine Similarity | 0.9983 |
 | Stable Features | 5668 |
 | Frequency-Shifted Features | 476 |
 | Reoriented Features | 0 |
 
 ### Percentage Breakdown
 
-| Category | Percentage |
-|----------|----------:|
-| Stable | 92.25% |
-| Frequency Shifted | 7.75% |
-| Reoriented | 0.00% |
+| Category | Count | Percentage |
+|----------|----------:|----------:|
+| Stable Features | 5668 | 92.25% |
+| Frequency-Shifted Features | 476 | 7.75% |
+| Reoriented Features | 0 | 0.00% |
 
-### Feature Similarity vs Frequency Shift
+The overwhelming majority of features remained stable after fine-tuning. Furthermore, no reoriented features were detected, indicating that feature directions were preserved throughout specialization.
+
+---
+
+## 7.3 Decoder Similarity Distribution
+
+![Decoder Similarity Distribution](../artifacts/comparisons/base_vs_python/decoder_similarity_hist.png)
+
+**Figure 1.** Distribution of cosine similarities between matched decoder vectors from the base SAE and the fine-tuned SAE.
+
+The histogram reveals a highly concentrated distribution near a cosine similarity of 1.0. Most matched features exhibit similarities above 0.99, indicating that the learned feature basis remained largely unchanged after fine-tuning.
+
+Several observations emerge:
+
+- The distribution is strongly peaked near 1.0.
+- Very few features exhibit similarities below 0.98.
+- No secondary low-similarity cluster is present.
+- The absence of low-similarity features is consistent with the observation that no reoriented features were detected.
+
+These results provide strong evidence that fine-tuning preserved the geometric structure of the SAE feature space.
+
+---
+
+## 7.4 Feature Similarity vs Frequency Shift
 
 ![Feature Similarity vs Frequency Shift](../artifacts/comparisons/base_vs_python/frequency_shift_scatter.png)
 
-**Figure 1.** Scatter plot showing matched SAE features after fine-tuning. The x-axis represents decoder cosine similarity between matched features, while the y-axis represents absolute activation-frequency shift. Two distinct clusters emerge. The lower cluster corresponds to stable features with minimal activation changes, while the upper cluster corresponds to features whose activation frequencies changed substantially despite retaining highly similar decoder directions. The concentration of points near cosine similarity values of 1.0 indicates that fine-tuning largely preserved feature identities while altering their utilization patterns.
+**Figure 2.** Scatter plot showing matched SAE features. The x-axis represents decoder cosine similarity, while the y-axis represents absolute activation-frequency shift.
 
-### Interpretation of Figure 1
+The scatter plot reveals two clearly separated clusters:
 
-Several observations emerge from the scatter plot:
+- A lower cluster corresponding to stable features with minimal activation-frequency changes.
+- An upper cluster corresponding to features whose activation frequencies changed substantially after fine-tuning.
 
-1. Most features exhibit decoder cosine similarities greater than 0.98, indicating strong preservation of feature directions.
+Notably, both clusters remain concentrated near cosine similarity values of 1.0. This indicates that feature directions were largely preserved even when activation frequencies changed dramatically.
 
-2. No large population of low-cosine features is observed, suggesting that fine-tuning did not substantially reorganize the learned feature basis.
+Several observations are noteworthy:
 
-3. A subset of features exhibits near-maximal activation-frequency shifts despite extremely high cosine similarity.
-
-4. The existence of these shifted features indicates that specialization on Python code primarily changes how often existing features are activated rather than changing what those features represent.
+1. Most matched features exhibit cosine similarities greater than 0.98.
+2. No significant population of low-cosine features is present.
+3. A subset of features exhibits near-maximal activation-frequency shifts despite retaining extremely high decoder similarity.
+4. The coexistence of high cosine similarity and large frequency shifts suggests that specialization primarily changes feature utilization rather than feature semantics.
 
 Taken together, these observations support the conclusion that domain-specific fine-tuning induces selective feature reweighting rather than wholesale representational restructuring.
 
+---
 
-## 7.3 Key Findings
+## 7.5 Qualitative Feature Analysis
 
-- Decoder vectors remained highly aligned after fine-tuning.
-- No reoriented features were observed.
+Inspection of top-activating examples revealed several interpretable feature categories.
+
+### Webpage Sharing Features
+
+Examples included activations on phrases such as:
+
+- "Click to share on Facebook"
+- "Click to share on Twitter"
+- "Click to share on Reddit"
+
+These features appear to capture common webpage-sharing boilerplate.
+
+### Document Structure Features
+
+Several features activated strongly on:
+
+- News article introductions
+- Image captions
+- Section headers
+- Formatting patterns
+
+suggesting sensitivity to document structure and layout-related text.
+
+### Numerical and Statistical Features
+
+A separate group of features consistently activated on:
+
+- Percentages
+- Rankings
+- Numerical comparisons
+- Statistical statements
+
+indicating specialization toward quantitative language.
+
+### Linguistic Construction Features
+
+Other features activated on recurring phrase templates and discourse structures, suggesting sensitivity to common linguistic patterns.
+
+Qualitative inspection showed that many of these interpretable features remained recognizable before and after fine-tuning, consistent with the high decoder cosine similarity observed quantitatively.
+
+---
+
+## 7.6 Summary of Findings
+
+The results indicate that narrow-domain fine-tuning on Python code produced limited representational drift.
+
+Key findings include:
+
 - 92.25% of features remained stable.
-- 7.75% of features exhibited substantial activation-frequency shifts.
-- Fine-tuning primarily changed feature usage rather than feature identity.
+- Only 7.75% of features exhibited substantial activation-frequency shifts.
+- No reoriented features were detected.
+- Mean decoder cosine similarity remained extremely high (0.9973).
+- Fine-tuning primarily altered feature usage rather than feature identity.
+
+Overall, the evidence suggests that Python specialization was achieved through selective reweighting of existing features rather than by constructing an entirely new representational basis.
 
 ---
 
