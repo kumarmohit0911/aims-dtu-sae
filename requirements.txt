@@ -1,0 +1,16 @@
+torch>=2.2
+transformers>=4.41,<5
+datasets>=2.19,<4
+accelerate>=0.30
+huggingface-hub<1
+numpy>=1.26
+scipy>=1.11
+pandas>=2.2
+scikit-learn>=1.4
+tqdm>=4.66
+pyyaml>=6.0
+matplotlib>=3.8
+seaborn>=0.13
+rich>=13.7
+sentencepiece>=0.2
+tiktoken>=0.7

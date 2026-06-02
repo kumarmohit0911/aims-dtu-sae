@@ -1,0 +1,25 @@
+seed: 13
+model_name: EleutherAI/pythia-160m
+layer_name: gpt_neox.layers.6.mlp
+activation_dir: artifacts/activations/base_layer6_mlp
+output_dir: artifacts/saes/base_layer6_mlp
+
+data:
+  dataset_name: Skylion007/openwebtext
+  dataset_config: null
+  split: train
+  text_column: text
+  max_examples: 20000
+  max_length: 128
+  tokens_per_batch: 2048
+
+sae:
+  input_dim: 768
+  expansion_factor: 8
+  learning_rate: 0.0003
+  batch_size: 4096
+  steps: 20000
+  l1_coefficient: 0.005
+  dead_feature_threshold: 0.000001
+  log_every: 100
+  save_every: 2000
